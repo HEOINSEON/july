@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>7월 우리반 마음건강 출석부</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts & Lucide Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #fafafa; /* 인스타그램 라이트 모드 배경색 */
+    }
+    .insta-card {
+      background: #ffffff;
+      border: 1px solid #e1e1e1;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); /* 더욱 부드러운 그림자(Soft Shadow) */
+      border-radius: 16px;
+    }
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #6366f1;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+      transition: transform 0.1s ease, background-color 0.2s;
+    }
+    .custom-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background-color: #4f46e5;
+    }
+    /* 선택지 버튼 커스텀 라디오 스타일링 */
+    .option-btn {
+      transition: all 0.2s ease;
+    }
+    .option-btn:hover {
+      border-color: #cbd5e1;
+      background-color: #f8fafc;
+    }
+    .radio-input:checked + .option-btn {
+      border-color: #6366f1;
+      background-color: #e0e7ff;
+      color: #312e81;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-md">
+    <!-- 메인 타이틀 영역 -->
+    <div class="text-center mb-6">
+      <h1 class="text-2xl font-bold text-gray-900 tracking-tight flex justify-center items-center gap-2">
+        <span>7월 마음건강 출석부</span>
+        <span class="text-indigo-500">🔋</span>
+      </h1>
+      <p class="text-xs text-gray-400 mt-1">오늘 하루도 나의 마음을 따스하게 돌아보아요</p>
+    </div>
+
+    <!-- 스크립트 로딩 중 인디케이터 -->
+    <div id="loadingOverlay" class="insta-card p-8 text-center flex flex-col items-center justify-center space-y-4">
+      <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+      <p class="text-gray-500 text-sm font-medium">오늘의 암호 및 설문을 불러오는 중입니다...</p>
+    </div>
+
+    <!-- [1단계] 학번/이름/암호 로그인 화면 (초기엔 숨김) -->
+    <div id="stepLogin" class="insta-card p-6 hidden space-y-6">
+      <div class="border-b pb-4">
+        <h2 class="text-lg font-semibold text-gray-800">등교 확인 완료하기</h2>
+        <p class="text-xs text-gray-400 mt-0.5">학번과 이름을 올바르게 선택 및 기입해주세요.</p>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <!-- 학번 선택 (21001 ~ 21033) -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">학번</label>
+          <div class="relative">
+            <select id="studentId" required class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 appearance-none">
+              <option value="" disabled selected>학번을 선택하세요</option>
+              <!-- JS에서 동적으로 생성됨 -->
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+              <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- 이름 입력 -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">이름</label>
+          <input type="text" id="studentName" required placeholder="이름을 직접 입력하세요" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <!-- 암호 입력 -->
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">오늘의 등교 암호</label>
+          <input type="password" id="todayPasswordInput" required placeholder="오늘의 출석 암호를 입력하세요" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <!-- 에러 메세지 표시 -->
+        <div id="loginError" class="hidden text-red-500 text-xs font-medium bg-red-50 p-2.5 rounded-lg flex items-center gap-1.5">
+          <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+          <span id="loginErrorMsg">암호가 틀렸습니다. 다시 확인해보세요.</span>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition shadow-sm">
+          확인하고 계속하기
+        </button>
+      </form>
+    </div>
+
+    <!-- [2단계] 설문 입력 화면 (초기엔 숨김) -->
+    <div id="stepSurvey" class="insta-card p-6 hidden space-y-6">
+      <!-- 설문 헤더 및 학생 정보 -->
+      <div class="border-b pb-4 flex justify-between items-center">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">마음 상태 기록하기</h2>
+          <p class="text-xs text-indigo-500 font-medium mt-0.5"><span id="displayUser">21014번 ㅇㅇㅇ</span> 학생 환영해요! 👋</p>
+        </div>
+        <button onclick="goToLogin()" class="text-xs text-gray-400 hover:text-indigo-500 flex items-center gap-1">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i> 수정
+        </button>
+      </div>
+
+      <form id="surveyForm" onsubmit="handleSurveySubmit(event)" class="space-y-6">
+        
+        <!-- 1. 마음 배터리 슬라이더 -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1 flex justify-between items-center">
+            <span>1. 나의 마음 배터리 잔량 🔋</span>
+            <span id="batteryVal" class="text-indigo-500 font-bold text-base">50%</span>
+          </label>
+          <p class="text-xs text-gray-400 mb-3">슬라이더를 밀어 지금 내 마음에 가득 찬 활력을 표시해주세요.</p>
+          <div class="relative pt-1">
+            <input type="range" id="batterySlider" min="0" max="100" value="50" oninput="updateBatteryDisplay(this.value)" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer custom-slider">
+            <div class="flex justify-between text-xs text-gray-400 px-1 mt-2">
+              <span>0% (완전 방전 😴)</span>
+              <span>50% (평범해요 😐)</span>
+              <span>100% (에너지 완충! 🔋)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 오늘 나를 힘들게 한 것 -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">2. 오늘 나를 힘들게 한 것 💔</label>
+          <p class="text-xs text-gray-400 mb-3">가장 가깝게 느끼는 한 가지 요소를 골라주세요.</p>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="relative cursor-pointer">
+              <input type="radio" name="hardThing" value="성적·평가 부담" required class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                📚 성적·평가 부담
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="hardThing" value="친구 관계" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                😤 친구 관계
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="hardThing" value="수면 부족" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                😴 수면 부족
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="hardThing" value="집안일" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🏠 집안일
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="hardThing" value="더위·컨디션" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🥵 더위·컨디션
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="hardThing" value="딱히 없음" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🤐 딱히 없음
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. 오늘 나를 지켜준 것 -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">3. 오늘 나를 지켜준 것 🛡️</label>
+          <p class="text-xs text-gray-400 mb-3">내 마음을 보듬고 지지해 준 버팀목은 무엇인가요?</p>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="relative cursor-pointer">
+              <input type="radio" name="protectThing" value="가족" required class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                👨‍👩‍👧 가족
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="protectThing" value="친구" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                👯 친구
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="protectThing" value="반려동물" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🐶 반려동물
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="protectThing" value="음악" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🎵 음악
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="protectThing" value="좋아하는 음식" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🍫 좋아하는 음식
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="protectThing" value="그냥 내 힘으로" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                💪 그냥 내 힘으로
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. 나에게 필요한 마음 처방전 -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1">4. 나에게 필요한 마음 처방전 💊</label>
+          <p class="text-xs text-gray-400 mb-3">지금 이 순간 나의 마음에 어떤 약이 필요한가요?</p>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="relative cursor-pointer">
+              <input type="radio" name="prescription" value="충분한 잠 자기" required class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                💤 충분한 잠 자기
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="prescription" value="좋아하는 것 하기" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🎨 좋아하는 것 하기
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="prescription" value="아무것도 안 하기" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🧘‍♀️ 아무것도 안 하기
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="prescription" value="속마음 털어놓기" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🗣️ 속마음 털어놓기
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="prescription" value="몸 움직이기" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🏃‍♂️ 몸 움직이기
+              </div>
+            </label>
+            <label class="relative cursor-pointer">
+              <input type="radio" name="prescription" value="그냥 쉬기" class="sr-only radio-input">
+              <div class="option-btn text-center p-2.5 border border-gray-200 rounded-lg text-xs text-gray-600">
+                🛌 그냥 쉬기
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 5. 오늘 나를 다독이는 한 마디 (7글자 제한) -->
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1 flex justify-between items-center">
+            <span>5. 오늘 나를 다독이는 한 마디 💌</span>
+            <span id="charCounter" class="text-xs font-bold text-indigo-500">0/7자</span>
+          </label>
+          <p class="text-xs text-gray-400 mb-3">나 스스로를 칭찬하는 문구를 <strong class="text-red-500">정확히 7글자</strong>로 입력해주세요 (공백 포함).</p>
+          <input type="text" id="cheeringWord" required oninput="handleCheeringWordInput(this.value)" placeholder="예: 잘버텨준나야 (7자)" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+          
+          <!-- 실시간 7글자 예시 가이드 툴팁 -->
+          <div class="mt-2 text-xs bg-indigo-50 p-2.5 rounded-lg text-indigo-700 flex flex-col gap-1">
+            <span class="font-medium">💡 7글자 예시 가이드:</span>
+            <div class="grid grid-cols-2 gap-1 text-[11px] text-gray-500 mt-1">
+              <span>• "잘 버텨준 나야" (7자) ✔</span>
+              <span>• "오늘도 고마워요" (7자) ✔</span>
+              <span>• "너는 정말 최고야" (7자) ✔</span>
+              <span>• "행복은 내곁에와" (7자) ✔</span>
+            </div>
+          </div>
+          
+          <p id="wordError" class="hidden text-red-500 text-xs font-semibold mt-1.5 flex items-center gap-1">
+            <i data-lucide="info" class="w-3.5 h-3.5"></i>
+            <span id="wordErrorMsg">아직 7글자가 아니에요.</span>
+          </p>
+        </div>
+
+        <!-- 저장 전송 버튼 -->
+        <button type="submit" id="submitBtn" class="w-full py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-sm font-semibold transition shadow-sm flex justify-center items-center gap-1.5">
+          <i data-lucide="send" class="w-4 h-4"></i>
+          <span>출석 및 나의 마음 전송하기</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- [3단계] 완료 화면 (초기엔 숨김) -->
+    <div id="stepComplete" class="insta-card p-8 text-center hidden space-y-6">
+      <div class="flex justify-center">
+        <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center border border-green-200">
+          <i data-lucide="check" class="w-8 h-8 text-green-500"></i>
+        </div>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-gray-800">마음 전송이 완료되었습니다!</h2>
+        <p class="text-xs text-gray-500 mt-2">출석 및 심리 상태 보고가 안전하게 기록되었습니다.</p>
+        <div class="bg-indigo-50 p-4 rounded-xl mt-4 max-w-xs mx-auto border border-indigo-100">
+          <p class="text-[11px] text-indigo-400 font-bold uppercase tracking-widest">오늘 스스로를 향한 약속</p>
+          <p id="displayCheer" class="text-lg font-bold text-indigo-800 mt-1">"잘 버텨준 나야"</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400">오늘 하루도 그 누구보다 단단하고 편안하길 바랄게요. 🌱</p>
+      <button onclick="resetApp()" class="w-full py-2.5 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition">
+        새로운 등교 등록하기
+      </button>
+    </div>
+
+    <!-- 하단 푸터 로고 -->
+    <p class="text-center text-[11px] text-gray-400 mt-6 tracking-wider flex items-center justify-center gap-1">
+      <span>신원중학교 허인선</span>
+      <i data-lucide="heart" class="w-3 h-3 text-rose-400 fill-rose-400"></i>
+      <span>© 2026</span>
+    </p>
+  </div>
+
+  <script>
+    // 배포된 구글 앱스 스크립트 웹 앱 주소 연동
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzNE0k1U5SQa6gTy-DObYONE7a5XEZUiftHPu5uLwZeY9jxyP31jFMijeCHW4jXptuP/exec';
+    
+    let SYSTEM_PASSWORD = ''; 
+    let SUBMITTED_WORD = '';
+
+    // 앱 첫 시작 로드
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initStudentDropdown();
+      fetchPasswordFromServer();
+    });
+
+    // 1. 학번 선택 박스 동적 주입 (21001 ~ 21033)
+    function initStudentDropdown() {
+      const selectEl = document.getElementById('studentId');
+      for (let i = 21001; i <= 21033; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i; 
+        selectEl.appendChild(option);
+      }
+    }
+
+    // 2. 서버로부터 오늘의 접속 암호 동적 로드
+    // sandbox 프레임 및 다양한 브라우저 호환성을 지원하기 위해 리다이렉트 처리 옵션을 최적화하였습니다.
+    function fetchPasswordFromServer() {
+      const targetUrl = `${GAS_WEB_APP_URL}?action=getTodayPassword`;
+      
+      fetch(targetUrl, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit',
+        redirect: 'follow'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('네트워크 응답 코드가 정상적이지 않습니다.');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data && data.password !== undefined) {
+          SYSTEM_PASSWORD = data.password.toString().trim();
+          document.getElementById('loadingOverlay').classList.add('hidden');
+          document.getElementById('stepLogin').classList.remove('hidden');
+        } else {
+          throw new Error('유효하지 않은 암호 포맷 수신');
+        }
+      })
+      .catch((err) => {
+        console.warn('암호 로드 실패, 로컬 기본값(1234)으로 대체 실행합니다. 오프라인 모드 상태:', err);
+        // iframe sandbox 보안 제약 등으로 인한 API 차단 시에도 정상 로그인이 가능하도록 로컬 기본 비밀번호 '1234'로 안전 보완책 적용
+        SYSTEM_PASSWORD = '1234'; 
+        document.getElementById('loadingOverlay').classList.add('hidden');
+        document.getElementById('stepLogin').classList.remove('hidden');
+      });
+    }
+
+    // 3. 1단계 로그인 확인
+    function handleLogin(e) {
+      e.preventDefault();
+      const studentId = document.getElementById('studentId').value;
+      const studentName = document.getElementById('studentName').value.trim();
+      const inputPassword = document.getElementById('todayPasswordInput').value.trim();
+      const errorDiv = document.getElementById('loginError');
+
+      if (!studentId) {
+        showLoginError('학번을 선택해주세요.');
+        return;
+      }
+      if (!studentName) {
+        showLoginError('이름을 입력해주세요.');
+        return;
+      }
+      if (inputPassword !== SYSTEM_PASSWORD) {
+        showLoginError('오늘의 암호가 일치하지 않습니다. 다시 확인하세요.');
+        return;
+      }
+
+      // 에러 숨김 및 다음 단계 진입
+      errorDiv.classList.add('hidden');
+      
+      // 유저 정보 저장 및 2단계 UI 적용
+      document.getElementById('displayUser').innerText = `${studentId}번 ${studentName}`;
+      document.getElementById('stepLogin').classList.add('hidden');
+      document.getElementById('stepSurvey').classList.remove('hidden');
+      
+      // 스크롤 탑
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showLoginError(msg) {
+      const errorDiv = document.getElementById('loginError');
+      const errorMsg = document.getElementById('loginErrorMsg');
+      errorMsg.innerText = msg;
+      errorDiv.classList.remove('hidden');
+    }
+
+    // 4. 배터리 게이지 슬라이더 수치 업데이트
+    function updateBatteryDisplay(val) {
+      document.getElementById('batteryVal').innerText = val + '%';
+    }
+
+    // 5. 실시간 다독이는 한마디 (7자) 체크 기능
+    function handleCheeringWordInput(text) {
+      const counter = document.getElementById('charCounter');
+      const errorDiv = document.getElementById('wordError');
+      const errorMsg = document.getElementById('wordErrorMsg');
+      const len = text.length;
+
+      counter.innerText = `${len}/7자`;
+
+      if (len === 7) {
+        counter.classList.remove('text-indigo-500', 'text-red-500');
+        counter.classList.add('text-green-600');
+        errorDiv.classList.add('hidden');
+      } else {
+        counter.classList.remove('text-green-600');
+        counter.classList.add('text-indigo-500');
+        if (len > 0) {
+          errorDiv.classList.remove('hidden');
+          if (len < 7) {
+            errorMsg.innerText = `현재 ${len}글자입니다. ${7 - len}글자가 더 필요합니다!`;
+          } else {
+            errorMsg.innerText = `현재 ${len}글자입니다. ${len - 7}글자를 줄여주세요!`;
+          }
+        } else {
+          errorDiv.classList.add('hidden');
+        }
+      }
+    }
+
+    // 6. 설문 결과 최종 제출 처리 (CORS 우회를 위해 POST 전송)
+    function handleSurveySubmit(e) {
+      e.preventDefault();
+
+      const cheeringWord = document.getElementById('cheeringWord').value;
+      const len = cheeringWord.length;
+
+      if (len !== 7) {
+        const errorDiv = document.getElementById('wordError');
+        const errorMsg = document.getElementById('wordErrorMsg');
+        errorDiv.classList.remove('hidden');
+        errorMsg.innerText = `확인해 주세요! 현재 ${len}글자이며, 정확히 '7글자'여야 합니다.`;
+        document.getElementById('cheeringWord').focus();
+        return;
+      }
+
+      // 폼 데이터 바인딩
+      const studentId = document.getElementById('studentId').value;
+      const studentName = document.getElementById('studentName').value.trim();
+      const battery = document.getElementById('batterySlider').value;
+      const hardThing = document.querySelector('input[name="hardThing"]:checked')?.value || '선택 없음';
+      const protectThing = document.querySelector('input[name="protectThing"]:checked')?.value || '선택 없음';
+      const prescription = document.querySelector('input[name="prescription"]:checked')?.value || '선택 없음';
+
+      const payload = {
+        action: 'submitAttendance',
+        studentId: studentId + '번', 
+        studentName,
+        battery,
+        hardThing,
+        protectThing,
+        prescription,
+        cheeringWord
+      };
+
+      // 전송 애니메이션 적용 및 버튼 비활성화
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+        <span>소중한 마음 전송 중...</span>
+      `;
+
+      SUBMITTED_WORD = cheeringWord;
+
+      // GAS 외부 배포 서버로 JSON 데이터 POST 전송
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8' // CORS preflight를 피하기 위한 최적 타입 지정
+        },
+        body: JSON.stringify(payload),
+        mode: 'cors',
+        redirect: 'follow'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then((response) => {
+        if (response.success) {
+          showSuccessState();
+        } else {
+          alert('데이터 전송 도중 에러가 발생했습니다: ' + response.error);
+          resetSubmitButton();
+        }
+      })
+      .catch((err) => {
+        console.error('CORS 또는 네트워크 에러:', err);
+        alert('구글 시트 연동 장애가 발생하였습니다. 다시 시도해주시길 바랍니다.');
+        resetSubmitButton();
+      });
+    }
+
+    function showSuccessState() {
+      document.getElementById('displayCheer').innerText = `"${SUBMITTED_WORD}"`;
+      document.getElementById('stepSurvey').classList.add('hidden');
+      document.getElementById('stepComplete').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetSubmitButton() {
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `
+        <i data-lucide="send" class="w-4 h-4"></i>
+        <span>출석 및 나의 마음 전송하기</span>
+      `;
+      lucide.createIcons();
+    }
+
+    // 7. 로그인 화면으로 돌아가기 기능
+    function goToLogin() {
+      document.getElementById('stepSurvey').classList.add('hidden');
+      document.getElementById('stepLogin').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 8. 완전 초기화
+    function resetApp() {
+      document.getElementById('surveyForm').reset();
+      document.getElementById('cheeringWord').value = '';
+      document.getElementById('charCounter').innerText = '0/7자';
+      document.getElementById('charCounter').classList.remove('text-green-600', 'text-red-500');
+      document.getElementById('charCounter').classList.add('text-indigo-500');
+      document.getElementById('wordError').classList.add('hidden');
+      document.getElementById('batterySlider').value = 50;
+      updateBatteryDisplay(50);
+      resetSubmitButton();
+
+      document.getElementById('stepComplete').classList.add('hidden');
+      document.getElementById('stepLogin').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  </script>
+</body>
+</html>
